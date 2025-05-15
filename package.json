@@ -1,4 +1,14 @@
 {
+  "name": "defi-lending-platform",
+  "version": "1.0.0",
+  "description": "A Decentralized Lending Platform built with Hardhat and React",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js",
+    "frontend": "cd frontend && npm start"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "hardhat": "^2.24.0"

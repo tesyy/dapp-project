@@ -1,6 +1,55 @@
 # DeFi Lending Platform
 
-A decentralized lending platform built for COMP4541 Individual Project.
+A decentralized lending platform built with Solidity, Hardhat, and React.
+
+## Project Structure
+
+- `/contracts`: Smart contracts written in Solidity
+- `/scripts`: Deployment scripts
+- `/test`: Contract test files
+- `/artifacts`: Compiled contract artifacts (ABIs, bytecode)
+- `/frontend`: React frontend application
+
+## Getting Started
+
+### Smart Contract Development
+
+```bash
+# Install dependencies
+npm install
+
+# Compile contracts
+npm run compile
+
+# Run tests
+npm run test
+
+# Deploy contracts
+npm run deploy
+```
+
+### Frontend Development
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Build for production
+npm run build
+
+# Deploy to GitHub Pages
+npm run deploy
+```
+
+## License
+
+MIT
 
 ## Features
 
@@ -45,3 +94,6 @@ The platform has been tested with:
 ## Screenshots
 
 [Include screenshots of the application in action]
+
+ npx hardhat run scripts/deploy.js --network localhost
+ 

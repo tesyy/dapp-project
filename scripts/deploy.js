@@ -1,13 +1,20 @@
-const hre = require("hardhat");
+   // scripts/deploy.js
+   const hre = require("hardhat");
 
-async function main() {
-  const Lending = await hre.ethers.getContractFactory("DecentralizedLending");
-  const lending = await Lending.deploy();
-  await lending.deployed();
-  console.log("Contract deployed to:", lending.address);
-}
+   async function main() {
+     const [deployer] = await hre.ethers.getSigners();
+     console.log("Deploying contracts with the account:", deployer.address);
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+     const Lending = await hre.ethers.getContractFactory("DecentralizedLending");
+     const lending = await Lending.deploy();
+     await lending.waitForDeployment(); // Use waitForDeployment instead of deployed
+
+     console.log("Lending contract deployed to:", lending.address);
+   }
+
+   main()
+     .then(() => process.exit(0))
+     .catch((error) => {
+       console.error(error);
+       process.exit(1);
+     });
