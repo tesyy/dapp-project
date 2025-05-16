@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/dapp-project/static/css/main.ca528f17.css",
+    "main.js": "/dapp-project/static/js/main.903a4d58.js",
+    "index.html": "/dapp-project/index.html",
+    "main.ca528f17.css.map": "/dapp-project/static/css/main.ca528f17.css.map",
+    "main.903a4d58.js.map": "/dapp-project/static/js/main.903a4d58.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ca528f17.css",
+    "static/js/main.903a4d58.js"
+  ]
+}

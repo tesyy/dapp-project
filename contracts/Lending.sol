@@ -44,7 +44,7 @@ contract DecentralizedLending is ReentrancyGuard {
         uint256 _interestRate,
         uint256 _duration,
         bool _collateralized
-    ) external {
+    ) public {
         require(_amount > 0, "Amount must be greater than 0");
         require(_interestRate > 0, "Interest rate must be greater than 0");
         require(_duration > 0, "Duration must be greater than 0");

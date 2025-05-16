@@ -106,10 +106,16 @@
     cursor: pointer;
     border-radius: 5px;
     transition: background-color 0.3s ease;
+    width: 100%;
   }
 
   .submit-button:hover {
     background-color: #7b1fa2;
+  }
+
+  .submit-button:disabled {
+    background-color: #d1c4e9;
+    cursor: not-allowed;
   }
 
   .loan-details {
@@ -119,7 +125,471 @@
     border-radius: 8px;
   }
 
+  .transaction-status {
+    max-width: 400px;
+    margin: 10px auto;
+    padding: 15px;
+    background-color: #e8f5e9;
+    border-left: 5px solid #43a047;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+  }
+  
+  .transaction-status.error {
+    background-color: #ffebee;
+    border-left-color: #e53935;
+    color: #c62828;
+  }
+  
+  .block-details {
+    margin: 20px 0;
+    padding: 20px;
+    background-color: #f0f8ff;
+    border-radius: 8px;
+    border: 1px solid #bbdefb;
+  }
+  
+  .block-details h2 {
+    color: #1565c0;
+    margin-top: 0;
+  }
+  
+  .block-details p {
+    margin: 10px 0;
+    font-family: monospace;
+    background-color: #e3f2fd;
+    padding: 8px;
+    border-radius: 4px;
+    word-break: break-all;
+  }
+
+  /* Tab Navigation */
+  .tab-navigation {
+    display: flex;
+    margin: 20px 0;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  
+  .tab-button {
+    background: none;
+    border: none;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #9e9e9e;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.3s;
+  }
+  
+  .tab-button:hover {
+    color: #6a1b9a;
+  }
+  
+  .tab-button.active {
+    color: #6a1b9a;
+    font-weight: bold;
+  }
+  
+  .tab-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: #6a1b9a;
+  }
+
+  /* Loan List */
+  .loan-list {
+    margin: 20px 0;
+  }
+  
+  .loan-list h2 {
+    color: #6a1b9a;
+    margin-bottom: 20px;
+  }
+  
+  .loading-message {
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+    color: #757575;
+  }
+  
+  .loans-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-gap: 20px;
+  }
+  
+  .loan-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .loan-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  }
+  
+  .loan-card h3 {
+    color: #6a1b9a;
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 10px;
+  }
+  
+  .loan-details {
+    margin-bottom: 15px;
+  }
+  
+  .loan-details p {
+    margin: 8px 0;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .loan-details .label {
+    font-weight: 500;
+    color: #757575;
+  }
+  
+  .loan-details .value {
+    font-weight: 500;
+  }
+  
+  .loan-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+  }
+  
+  .fund-button, .repay-button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .fund-button {
+    background-color: #43a047;
+    color: white;
+  }
+  
+  .fund-button:hover {
+    background-color: #388e3c;
+  }
+  
+  .repay-button {
+    background-color: #3949ab;
+    color: white;
+  }
+  
+  .repay-button:hover {
+    background-color: #303f9f;
+  }
+  
+  .fund-button:disabled, .repay-button:disabled {
+    background-color: #e0e0e0;
+    color: #9e9e9e;
+    cursor: not-allowed;
+  }
+  
+  /* Loan Status Colors */
+  .status-pending {
+    color: #f57c00;
+  }
+  
+  .status-active {
+    color: #43a047;
+  }
+  
+  .status-repaid {
+    color: #757575;
+  }
+  
+  .loan-card.repaid {
+    opacity: 0.7;
+  }
+  
+  .owner-indicator {
+    color: #7b1fa2;
+    font-style: italic;
+  }
+  
+  /* Error message */
+  .error-message {
+    color: #d32f2f;
+    background-color: #ffebee;
+    border-left: 3px solid #f44336;
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+  }
+  
+  /* Repayment Modal */
+  .repayment-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .repayment-modal-content {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  .repayment-modal-content h3 {
+    color: #6a1b9a;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .repayment-details {
+    margin-bottom: 20px;
+  }
+  
+  .repayment-summary {
+    background-color: #f5f5f5;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 15px 0;
+  }
+  
+  .repayment-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 8px 0;
+  }
+  
+  .repayment-row.total {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px dashed #bdbdbd;
+    font-weight: bold;
+  }
+  
+  .repayment-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+  }
+  
+  .repay-button.confirm {
+    flex: 1;
+    margin-right: 10px;
+  }
+  
+  .cancel-button {
+    background-color: #e0e0e0;
+    color: #757575;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    flex: 1;
+    margin-left: 10px;
+    transition: background-color 0.3s;
+  }
+  
+  .cancel-button:hover {
+    background-color: #bdbdbd;
+  }
+
   code {
     font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
       monospace;
+  }
+
+  /* Network Guide Modal */
+  .network-guide-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .network-guide-content {
+    background-color: white;
+    border-radius: 8px;
+    padding: 30px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  .network-guide-content h2 {
+    color: #6a1b9a;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 15px;
+  }
+  
+  .guide-section {
+    margin: 20px 0;
+  }
+  
+  .guide-section h3 {
+    color: #6a1b9a;
+    margin-bottom: 10px;
+  }
+  
+  .guide-section ul, .guide-section ol {
+    padding-left: 20px;
+  }
+  
+  .guide-section li {
+    margin: 8px 0;
+    line-height: 1.5;
+  }
+  
+  .guide-section code {
+    background-color: #f5f5f5;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+    color: #6a1b9a;
+  }
+  
+  .close-button {
+    background-color: #6a1b9a;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin-top: 20px;
+    width: 100%;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+  }
+  
+  .close-button:hover {
+    background-color: #8e24aa;
+  }
+  
+  /* Empty loans message */
+  .empty-loans {
+    text-align: center;
+    padding: 40px 20px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+  
+  .empty-loans p {
+    font-size: 18px;
+    color: #757575;
+    margin-bottom: 20px;
+  }
+  
+  .tab-action-button {
+    background-color: #6a1b9a;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+  }
+  
+  .tab-action-button:hover {
+    background-color: #8e24aa;
+  }
+
+  /* Refresh button */
+  .refresh-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 15px;
+  }
+  
+  .refresh-button {
+    background-color: #7b1fa2;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s;
+  }
+  
+  .refresh-button:hover {
+    background-color: #6a1b9a;
+  }
+  
+  .refresh-button:disabled {
+    background-color: #d1c4e9;
+    cursor: not-allowed;
+  }
+
+  /* Wallet connection controls */
+  .wallet-controls {
+    display: flex;
+    align-items: center;
+  }
+  
+  .connection-status {
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 5px 10px;
+    border-radius: 20px;
+  }
+  
+  .connected-address {
+    color: white;
+    margin-right: 10px;
+    font-size: 14px;
+  }
+  
+  .disconnect-button {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .disconnect-button:hover {
+    background-color: rgba(255, 255, 255, 0.3);
   }

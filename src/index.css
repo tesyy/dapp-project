@@ -1,0 +1,328 @@
+/* Wallet section styling */
+.wallet-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.connected-address {
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.connect-button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.connect-button:hover {
+  background-color: #2980b9;
+}
+
+/* Make disconnect button more prominent */
+.disconnect-button {
+  background-color: #ff4757 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 8px 12px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+  transition: background-color 0.2s !important;
+  margin-left: 10px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  display: inline-block !important;
+}
+
+.disconnect-button:hover {
+  background-color: #ff6b81 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Tabs styling */
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  background-color: #f0f0f0;
+  border: none;
+  cursor: pointer;
+  margin-right: 5px;
+  border-radius: 5px 5px 0 0;
+  font-weight: 500;
+}
+
+.tab-button.active {
+  background-color: #4CAF50;
+  color: white;
+}
+
+/* Loan card styling */
+.loan-card {
+  background-color: white;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  margin-bottom: 15px;
+  border-left: 5px solid #ddd;
+}
+
+.loan-card.active {
+  border-left-color: #4CAF50;
+}
+
+.loan-card.pending {
+  border-left-color: #FFC107;
+}
+
+.loan-card.repaid {
+  border-left-color: #9E9E9E;
+  opacity: 0.8;
+}
+
+.loan-card.available {
+  border-left-color: #2196F3;
+}
+
+.loan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.loan-details {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+
+.loan-details-section {
+  flex: 1;
+  min-width: 250px;
+  margin-right: 20px;
+}
+
+.loan-details-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.loan-status {
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-pending {
+  background-color: #FFF8E1;
+  color: #FFA000;
+}
+
+.status-active {
+  background-color: #E8F5E9;
+  color: #388E3C;
+}
+
+.status-repaid {
+  background-color: #EEEEEE;
+  color: #616161;
+}
+
+/* Loan actions styling */
+.loan-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.fund-button, .repay-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.fund-button {
+  background-color: #2196F3;
+  color: white;
+}
+
+.repay-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.etherscan-link {
+  color: #2196F3;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.etherscan-link:hover {
+  text-decoration: underline;
+}
+
+/* Modal styling */
+.repayment-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.repayment-modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.repayment-summary {
+  margin: 20px 0;
+}
+
+.repayment-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.repayment-row.total {
+  font-weight: 700;
+  font-size: 1.1em;
+  border-top: 2px solid #eee;
+  border-bottom: none;
+  padding-top: 10px;
+}
+
+.repayment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancel-button {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.repay-button.confirm {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Transaction details styling */
+.transaction-details {
+  background-color: #E8F5E9;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  border-left: 5px solid #4CAF50;
+}
+
+.transaction-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.transaction-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.transaction-item .label {
+  font-weight: 500;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+.transaction-item .value {
+  font-family: monospace;
+  background-color: #f8f8f8;
+  padding: 5px;
+  border-radius: 3px;
+  word-break: break-all;
+}
+
+.explorer-link {
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.explorer-link a {
+  color: #2196F3;
+  text-decoration: none;
+}
+
+.explorer-link a:hover {
+  text-decoration: underline;
+}
+
+.clear-tx-button {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .tabs {
+    flex-wrap: wrap;
+  }
+  
+  .tab-button {
+    flex: 1 0 calc(50% - 5px);
+    margin-bottom: 5px;
+  }
+  
+  .loan-details-section {
+    flex: 1 0 100%;
+    margin-right: 0;
+    margin-bottom: 15px;
+  }
+  
+  .transaction-grid {
+    grid-template-columns: 1fr;
+  }
+} 

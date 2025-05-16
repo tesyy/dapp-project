@@ -9,7 +9,8 @@
      const lending = await Lending.deploy();
      await lending.waitForDeployment(); // Use waitForDeployment instead of deployed
 
-     console.log("Lending contract deployed to:", lending.address);
+     const lendingAddress = await lending.getAddress();
+     console.log("Lending contract deployed to:", lendingAddress);
    }
 
    main()
