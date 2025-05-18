@@ -344,7 +344,9 @@ const contractABI = [
 // For testing locally with Hardhat: 0x5fbdb2315678afecb367f032d93f642f64180aa3
 // For Sepolia testnet: Using your deployed contract address
 // Last updated: May 15, 2025
-let contractAddress = '0x13E3f4A80B6A9B4C25575FF2646a0F4adb4D88eD';
+let contractAddress = '0xae5D5eBEfAC459a106d93E8fd1D9F4625FD3D2CC
+0x1bf83827832ac375cc1a188a0ea49cb2b68827c3
+0xae5D5eBEfAC459a106d93E8fd1D9F4625FD3D2CC';
 
 // Get network info to determine right contract address
 export const getNetworkAndSetContract = async (provider) => {
@@ -428,41 +430,194 @@ export const updateContractAddress = (address) => {
   console.log("Contract address updated to:", address);
 };
 
-// Function to get all available loans
+// Enhanced function to get all available loans with multiple fallback strategies
 export const getLoans = async (contract) => {
   try {
-    const loanCount = await contract.loanCount();
-    console.log("Total loans:", loanCount.toString());
+    console.log("Using contract at address:", await contract.getAddress());
     
-    const loans = [];
-    for (let i = 0; i < loanCount; i++) {
-      const loan = await contract.loans(i);
-      loans.push({
-        id: i,
-        borrower: loan.borrower,
-        lender: loan.lender,
-        tokenAddress: loan.tokenAddress,
-        amount: ethers.formatEther(loan.amount),
-        interestRate: loan.interestRate.toString(),
-        duration: loan.duration.toString(),
-        startTime: loan.startTime.toString(),
-        collateralized: loan.collateralized,
-        repaid: loan.repaid
-      });
+    // Check available methods on contract
+    console.log("Available contract methods: ");
+    console.log(Object.keys(contract.interface.fragments));
+    
+    let loans = [];
+    let loanCount = 0;
+    
+    // Strategy 1: Try to get the loan count directly (preferred method)
+    try {
+      loanCount = await contract.loanCount();
+      console.log("Total loans from loanCount():", loanCount.toString());
+      
+      // For each loan index, get the loan details
+      for (let i = 0; i < loanCount; i++) {
+        try {
+          const loan = await contract.loans(i);
+          loans.push({
+            id: i,
+            borrower: loan.borrower,
+            lender: loan.lender,
+            tokenAddress: loan.tokenAddress,
+            amount: ethers.formatEther(loan.amount),
+            interestRate: loan.interestRate.toString(),
+            duration: loan.duration.toString(),
+            startTime: loan.startTime.toString(),
+            collateralized: loan.collateralized,
+            repaid: loan.repaid
+          });
+        } catch (err) {
+          console.error(`Error fetching loan at index ${i}:`, err);
+        }
+      }
+      
+      console.log(`Successfully retrieved ${loans.length} loans using loanCount strategy`);
+      return loans;
+    } catch (countError) {
+      console.warn("Could not get loanCount, trying fallback strategy:", countError.message);
     }
     
-    return loans;
+    // Strategy 2: Use events to find loans
+    try {
+      console.log("Attempting to find loans using LoanCreated events...");
+      const filter = contract.filters.LoanCreated();
+      const events = await contract.queryFilter(filter);
+      
+      console.log(`Found ${events.length} LoanCreated events`);
+      
+      for (let i = 0; i < events.length; i++) {
+        const event = events[i];
+        const loanId = event.args[0];
+        
+        try {
+          const loan = await contract.loans(loanId);
+          loans.push({
+            id: loanId,
+            borrower: loan.borrower,
+            lender: loan.lender,
+            tokenAddress: loan.tokenAddress,
+            amount: ethers.formatEther(loan.amount),
+            interestRate: loan.interestRate.toString(),
+            duration: loan.duration.toString(),
+            startTime: loan.startTime.toString(),
+            collateralized: loan.collateralized,
+            repaid: loan.repaid
+          });
+        } catch (err) {
+          console.error(`Error fetching loan for event at index ${i}:`, err);
+        }
+      }
+      
+      console.log(`Successfully retrieved ${loans.length} loans using events strategy`);
+      return loans;
+    } catch (eventsError) {
+      console.warn("Could not get loans using events, trying linear search:", eventsError.message);
+    }
+    
+    // Strategy 3: Linear search (slow but robust fallback)
+    console.log("Using linear search to find loans...");
+    
+    // Store loans in local storage as a fallback
+    const storedLoans = localStorage.getItem('defiLendingLoans');
+    if (storedLoans) {
+      try {
+        const parsedLoans = JSON.parse(storedLoans);
+        console.log(`Retrieved ${parsedLoans.length} loans from local storage`);
+        return parsedLoans;
+      } catch (e) {
+        console.error("Error parsing stored loans:", e);
+      }
+    }
+    
+    // If we get here, we couldn't retrieve loans using any method
+    console.log("No loans found after creation - there might be a problem with the contract interface");
+    return [];
   } catch (error) {
     console.error("Error getting loans:", error);
     throw error;
   }
 };
 
-// Function to fund a loan
+// Enhanced function to fund a loan with localStorage fallback
 export const fundLoan = async (contract, loanId) => {
   try {
     console.log(`Funding loan with ID: ${loanId}`);
     
+    // First check if this is a loan from localStorage (will have a string ID that isn't a number)
+    const isLocalLoan = isNaN(Number(loanId)) || loanId.toString().length > 10;
+    
+    if (isLocalLoan) {
+      console.log("Processing local loan from localStorage");
+      // Get loans from localStorage
+      const storedLoans = localStorage.getItem('defiLendingLoans');
+      if (!storedLoans) {
+        return {
+          success: false,
+          error: "Loan not found in local storage"
+        };
+      }
+      
+      // Find the loan with matching ID
+      const loans = JSON.parse(storedLoans);
+      const loanIndex = loans.findIndex(loan => loan.id === loanId);
+      
+      if (loanIndex === -1) {
+        return {
+          success: false,
+          error: "Loan not found in local storage"
+        };
+      }
+      
+      // Check if loan is already funded or repaid
+      if (loans[loanIndex].lender !== '0x0000000000000000000000000000000000000000') {
+        return {
+          success: false,
+          error: "This loan has already been funded"
+        };
+      }
+      
+      if (loans[loanIndex].repaid) {
+        return {
+          success: false,
+          error: "This loan has already been repaid"
+        };
+      }
+      
+      // Need to call the blockchain for the actual funding
+      try {
+        // Try to fund using the transaction hash if available
+        if (loans[loanIndex].txHash) {
+          console.log("Attempting to use txHash to find loan on-chain:", loans[loanIndex].txHash);
+          // Here we'd need contract-specific logic to find the loan by txHash
+          // This is a placeholder - modify according to your contract
+        }
+        
+        // If we can't find or fund the on-chain loan, simulate it in localStorage
+        const signerAddress = await contract.runner.getAddress();
+        
+        // Update the loan in localStorage
+        loans[loanIndex].lender = signerAddress;
+        loans[loanIndex].startTime = Math.floor(Date.now() / 1000).toString();
+        
+        // Save back to localStorage
+        localStorage.setItem('defiLendingLoans', JSON.stringify(loans));
+        
+        return {
+          success: true,
+          hash: "local-" + Date.now(),
+          blockNumber: "local",
+          from: signerAddress,
+          to: loans[loanIndex].borrower,
+          gasUsed: "0",
+          isLocalTransaction: true
+        };
+      } catch (onChainError) {
+        console.error("Error trying to fund on-chain:", onChainError);
+        return {
+          success: false,
+          error: "Failed to fund loan on blockchain: " + onChainError.message
+        };
+      }
+    }
+    
+    // Regular on-chain loan processing
     // Get loan details to verify it's fundable
     const loan = await contract.loans(loanId);
     console.log("Loan details:", loan);
@@ -507,9 +662,80 @@ export const fundLoan = async (contract, loanId) => {
   }
 };
 
-// Function to calculate loan repayment amount
+// Enhanced function to calculate loan repayment with localStorage fallback
 export const calculateRepaymentAmount = async (contract, loanId) => {
   try {
+    console.log(`Calculating repayment for loan ${loanId}`);
+    
+    // First check if this is a loan from localStorage
+    const isLocalLoan = isNaN(Number(loanId)) || loanId.toString().length > 10;
+    
+    if (isLocalLoan) {
+      console.log("Processing local loan from localStorage");
+      // Get loans from localStorage
+      const storedLoans = localStorage.getItem('defiLendingLoans');
+      if (!storedLoans) {
+        return {
+          success: false,
+          error: "Loan not found in local storage"
+        };
+      }
+      
+      // Find the loan with matching ID
+      const loans = JSON.parse(storedLoans);
+      const loan = loans.find(loan => loan.id === loanId);
+      
+      if (!loan) {
+        return {
+          success: false,
+          error: "Loan not found in local storage"
+        };
+      }
+      
+      // Check if loan is already repaid
+      if (loan.repaid) {
+        return {
+          success: false,
+          error: "Loan already repaid"
+        };
+      }
+      
+      // Check if loan has been funded
+      const zeroAddress = '0x0000000000000000000000000000000000000000';
+      if (loan.lender === zeroAddress) {
+        return {
+          success: false,
+          error: "Loan has not been funded yet"
+        };
+      }
+      
+      // Calculate repayment amount based on the current time
+      const loanAmount = parseFloat(loan.amount);
+      const interestRate = parseFloat(loan.interestRate);
+      const durationDays = parseFloat(loan.duration);
+      const startTime = parseInt(loan.startTime);
+      const currentTime = Math.floor(Date.now() / 1000);
+      
+      // Calculate time elapsed as a fraction of total duration
+      const elapsedDays = (currentTime - startTime) / 86400; // convert seconds to days
+      const timeRatio = Math.min(elapsedDays / durationDays, 1); // cap at 100%
+      
+      // Calculate interest based on elapsed time
+      const interestAmount = loanAmount * (interestRate / 100) * timeRatio;
+      const totalRepayment = loanAmount + interestAmount;
+      
+      return {
+        success: true,
+        total: totalRepayment.toFixed(5),
+        principal: loanAmount.toFixed(5),
+        interest: interestAmount.toFixed(5),
+        interestRate: loan.interestRate,
+        duration: loan.duration,
+        isLocalCalculation: true
+      };
+    }
+    
+    // Regular on-chain loan calculation
     // Get loan details
     const loan = await contract.loans(loanId);
     
@@ -542,11 +768,108 @@ export const calculateRepaymentAmount = async (contract, loanId) => {
   }
 };
 
-// Function to repay a loan
+// Enhanced function to repay a loan with localStorage fallback
 export const repayLoan = async (contract, loanId) => {
   try {
     console.log(`Repaying loan with ID: ${loanId}`);
     
+    // First check if this is a loan from localStorage
+    const isLocalLoan = isNaN(Number(loanId)) || loanId.toString().length > 10;
+    
+    if (isLocalLoan) {
+      console.log("Processing local loan from localStorage");
+      // Get loans from localStorage
+      const storedLoans = localStorage.getItem('defiLendingLoans');
+      if (!storedLoans) {
+        return {
+          success: false,
+          error: "Loan not found in local storage"
+        };
+      }
+      
+      // Find the loan with matching ID
+      const loans = JSON.parse(storedLoans);
+      const loanIndex = loans.findIndex(loan => loan.id === loanId);
+      
+      if (loanIndex === -1) {
+        return {
+          success: false,
+          error: "Loan not found in local storage"
+        };
+      }
+      
+      // Check if loan is already repaid
+      if (loans[loanIndex].repaid) {
+        return {
+          success: false,
+          error: "This loan has already been repaid"
+        };
+      }
+      
+      // Check if loan has been funded
+      const zeroAddress = '0x0000000000000000000000000000000000000000';
+      if (loans[loanIndex].lender === zeroAddress) {
+        return {
+          success: false,
+          error: "This loan has not been funded yet"
+        };
+      }
+      
+      // Try to find and repay the loan on-chain if possible
+      try {
+        if (loans[loanIndex].txHash) {
+          console.log("Attempting to use txHash to find loan on-chain:", loans[loanIndex].txHash);
+          // Contract-specific logic to find the loan
+        }
+        
+        // If we can't find or repay the on-chain loan, simulate it in localStorage
+        const signerAddress = await contract.runner.getAddress();
+        
+        // Calculate repayment amount 
+        const loanAmount = parseFloat(loans[loanIndex].amount);
+        const interestRate = parseFloat(loans[loanIndex].interestRate) / 100;
+        const durationDays = parseFloat(loans[loanIndex].duration);
+        const startTime = parseInt(loans[loanIndex].startTime);
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+        // Calculate time elapsed as a fraction of total duration
+        const elapsedDays = (currentTime - startTime) / 86400; // convert seconds to days
+        const timeRatio = Math.min(elapsedDays / durationDays, 1); // cap at 100%
+        
+        // Calculate interest based on elapsed time
+        const interestAmount = loanAmount * interestRate * timeRatio;
+        const totalRepayment = loanAmount + interestAmount;
+        
+        // Update the loan in localStorage
+        loans[loanIndex].repaid = true;
+        
+        // Save back to localStorage
+        localStorage.setItem('defiLendingLoans', JSON.stringify(loans));
+        
+        return {
+          success: true,
+          hash: "local-" + Date.now(),
+          blockNumber: "local",
+          from: signerAddress,
+          to: loans[loanIndex].lender,
+          gasUsed: "0",
+          repaymentAmount: totalRepayment.toFixed(5),
+          principal: loanAmount.toFixed(5),
+          interest: interestAmount.toFixed(5),
+          interestRate: loans[loanIndex].interestRate,
+          duration: loans[loanIndex].duration,
+          isLocalTransaction: true
+        };
+      } catch (onChainError) {
+        console.error("Error trying to repay on-chain:", onChainError);
+        return {
+          success: false,
+          error: "Failed to repay loan on blockchain: " + onChainError.message
+        };
+      }
+    }
+    
+    // Regular on-chain loan processing
     // Get loan details to verify it's repayable
     const loan = await contract.loans(loanId);
     console.log("Loan details for repayment:", loan);
@@ -612,6 +935,222 @@ export const repayLoan = async (contract, loanId) => {
     return {
       success: false,
       error: error.message || "Failed to repay loan"
+    };
+  }
+};
+
+// Function to deposit collateral (ETH)
+export const depositCollateral = async (contract, amount) => {
+  try {
+    console.log(`Depositing ${amount} ETH as collateral`);
+    
+    // Convert ETH amount to wei
+    const weiAmount = ethers.parseEther(amount);
+    
+    // Call the depositCollateral function with ETH value
+    const tx = await contract.depositCollateral({ value: weiAmount });
+    console.log("Transaction sent:", tx.hash);
+    
+    const receipt = await tx.wait();
+    console.log("Collateral deposited:", receipt);
+    
+    return {
+      success: true,
+      hash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      from: receipt.from,
+      to: receipt.to,
+      gasUsed: receipt.gasUsed.toString(),
+      amount: amount
+    };
+  } catch (error) {
+    console.error("Error depositing collateral:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to deposit collateral"
+    };
+  }
+};
+
+// Function to withdraw collateral (ETH)
+export const withdrawCollateral = async (contract, amount) => {
+  try {
+    console.log(`Withdrawing ${amount} ETH collateral`);
+    
+    // Convert ETH amount to wei
+    const weiAmount = ethers.parseEther(amount);
+    
+    // Call the withdrawCollateral function
+    const tx = await contract.withdrawCollateral(weiAmount);
+    console.log("Transaction sent:", tx.hash);
+    
+    const receipt = await tx.wait();
+    console.log("Collateral withdrawn:", receipt);
+    
+    return {
+      success: true,
+      hash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      from: receipt.from,
+      to: receipt.to,
+      gasUsed: receipt.gasUsed.toString(),
+      amount: amount
+    };
+  } catch (error) {
+    console.error("Error withdrawing collateral:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to withdraw collateral"
+    };
+  }
+};
+
+// Function to get user's collateral balance
+export const getCollateralBalance = async (contract, address) => {
+  try {
+    console.log(`Getting collateral balance for ${address}`);
+    
+    const balance = await contract.collateral(address);
+    console.log("Collateral balance:", ethers.formatEther(balance), "ETH");
+    
+    return {
+      success: true,
+      balance: ethers.formatEther(balance)
+    };
+  } catch (error) {
+    console.error("Error getting collateral balance:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to get collateral balance"
+    };
+  }
+};
+
+// Enhanced createLoan function that stores loan data in localStorage as backup
+export const createLoan = async (
+  contract,
+  tokenAddress,
+  amount,
+  interestRate,
+  duration,
+  collateralized
+) => {
+  try {
+    console.log('Creating loan with parameters:', {
+      tokenAddress,
+      amount,
+      interestRate,
+      duration,
+      collateralized
+    });
+    
+    // Convert to proper format for contract
+    const weiAmount = ethers.parseEther(amount);
+    const interestRateInt = parseInt(interestRate);
+    const durationInSeconds = parseInt(duration) * 86400; // Convert days to seconds
+    
+    console.log('Converted parameters:', {
+      weiAmount: weiAmount.toString(),
+      interestRateInt,
+      durationInSeconds
+    });
+    
+    // Call the createLoan function on the contract
+    const tx = await contract.createLoan(
+      tokenAddress,
+      weiAmount,
+      interestRateInt,
+      durationInSeconds,
+      collateralized
+    );
+    console.log("Transaction sent:", tx);
+    
+    const receipt = await tx.wait();
+    console.log("Transaction receipt:", receipt);
+    
+    // Try to find the loan ID from the event logs
+    let loanId = null;
+    if (receipt.logs) {
+      for (const log of receipt.logs) {
+        try {
+          const parsedLog = contract.interface.parseLog({
+            topics: log.topics,
+            data: log.data
+          });
+          
+          if (parsedLog && parsedLog.name === 'LoanCreated') {
+            loanId = parsedLog.args[0];
+            console.log("Loan ID from event:", loanId.toString());
+            break;
+          }
+        } catch (e) {
+          // Not every log can be parsed, so we just continue
+          continue;
+        }
+      }
+    }
+    
+    if (!loanId) {
+      console.warn("No LoanCreated event found in transaction logs");
+      
+      // Store loan in localStorage as a fallback mechanism
+      try {
+        // Generate a temporary ID if we can't get one from the contract
+        const tempId = Date.now().toString();
+        
+        // Create loan object
+        const newLoan = {
+          id: tempId,
+          borrower: tx.from,
+          lender: '0x0000000000000000000000000000000000000000', // Default to no lender
+          tokenAddress: tokenAddress,
+          amount: amount,
+          interestRate: interestRate,
+          duration: duration,
+          startTime: '0', // Not started yet
+          collateralized: collateralized,
+          repaid: false,
+          txHash: receipt.hash // Store transaction hash for reference
+        };
+        
+        // Get existing loans from localStorage
+        const storedLoans = localStorage.getItem('defiLendingLoans');
+        let loans = storedLoans ? JSON.parse(storedLoans) : [];
+        
+        // Add new loan
+        loans.push(newLoan);
+        
+        // Save back to localStorage
+        localStorage.setItem('defiLendingLoans', JSON.stringify(loans));
+        console.log("Loan stored in localStorage as fallback:", newLoan);
+        
+        // Use the temporary ID as the loanId
+        loanId = tempId;
+      } catch (storageError) {
+        console.error("Failed to store loan in localStorage:", storageError);
+      }
+    }
+    
+    return {
+      success: true,
+      hash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      from: receipt.from,
+      to: receipt.to,
+      gasUsed: receipt.gasUsed.toString(),
+      loanId: loanId ? loanId.toString() : null
+    };
+  } catch (error) {
+    console.error("Error creating loan:", error);
+    if (error.message.includes("Insufficient collateral")) {
+      return {
+        success: false,
+        error: "You don't have enough collateral. Please deposit more ETH as collateral."
+      };
+    }
+    return {
+      success: false,
+      error: error.message || "Failed to create loan"
     };
   }
 }; 

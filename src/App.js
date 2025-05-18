@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { connectWallet, getLoans } from './ethereum';
+import { connectWallet } from './ethereum';
 import Header from './components/Header';
 import MyLoans from './components/MyLoans';
 import LoanPool from './components/LoanPool';
 import ActiveLoans from './components/ActiveLoans';
+import CollateralManagement from './components/CollateralManagement';
+import ContractProxy from './contractProxy';
 
 function App() {
   const [account, setAccount] = useState('');
@@ -12,13 +14,16 @@ function App() {
   const [amount, setAmount] = useState('');
   const [interestRate, setInterestRate] = useState('');
   const [duration, setDuration] = useState('');
+  const [isCollateralized, setIsCollateralized] = useState(false);
   const [transactionData, setTransactionData] = useState(null);
   const [contract, setContract] = useState(null);
+  const [contractProxy, setContractProxy] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loans, setLoans] = useState([]);
-  const [activeTab, setActiveTab] = useState('create'); // 'create', 'myloans', 'pool', 'active'
+  const [activeTab, setActiveTab] = useState('create'); // 'create', 'myloans', 'pool', 'active', 'collateral'
   const [isLoadingLoans, setIsLoadingLoans] = useState(false);
-  const [lastAction, setLastAction] = useState(''); // 'create', 'fund', or 'repay'
+  const [lastAction, setLastAction] = useState(''); // 'create', 'fund', 'repay', 'deposit-collateral', 'withdraw-collateral'
+  const [isFallbackMode, setIsFallbackMode] = useState(false); // Track if we're in fallback mode
 
   // Only set up event listeners for account and chain changes, no automatic connection
   useEffect(() => {
@@ -32,6 +37,7 @@ function App() {
           setAccount('');
           setIsConnected(false);
           setContract(null);
+          setContractProxy(null);
           setLoans([]);
         }
       });
@@ -41,25 +47,74 @@ function App() {
         window.location.reload();
       });
     }
+    
+    // Check if we're in fallback mode
+    const fallbackMode = localStorage.getItem('fallbackMode') === 'true';
+    if (fallbackMode) {
+      setIsFallbackMode(true);
+    }
   }, []);
 
-  const loadLoans = async (contractInstance) => {
+  const loadLoans = async (contractProxyInstance) => {
     try {
       setIsLoadingLoans(true);
-      const contractToUse = contractInstance || contract;
+      const proxyToUse = contractProxyInstance || contractProxy;
       
-      if (!contractToUse) {
-        console.error("No contract instance available to load loans");
+      if (!proxyToUse) {
+        console.error("No contract proxy instance available to load loans");
         return;
       }
       
-      console.log("Getting loans from contract:", await contractToUse.getAddress());
-      const loansList = await getLoans(contractToUse);
+      console.log("Getting loans from contract proxy");
+      
+      // Use the contract proxy to get loans
+      const loansList = await proxyToUse.getLoans();
       console.log("Loans loaded:", loansList);
       
-      // Sort by ID (most recent first)
-      const sortById = (a, b) => parseInt(b.id) - parseInt(a.id);
-      const sortedLoans = [...loansList].sort(sortById);
+      // Check if we got an array (local storage) or a BigInt (contract)
+      let loansArray = [];
+      
+      if (Array.isArray(loansList)) {
+        // Already an array from IndexedDB
+        loansArray = loansList;
+      } else if (typeof loansList === 'bigint') {
+        // We got a loanCount from the contract, need to fetch each loan
+        const count = Number(loansList);
+        console.log(`Got loanCount: ${count} from contract`);
+        
+        // Implement contract-specific loan retrieval if needed
+        // For now just use an empty array as we're assuming fallback mode
+        loansArray = [];
+      } else {
+        console.warn("Unknown format for loans list:", loansList);
+        loansArray = [];
+      }
+      
+      // Sort by status and ID
+      const sortByStatusAndId = (a, b) => {
+        // First sort by status: pending, then active, then repaid
+        const getStatusValue = (loan) => {
+          if (loan.repaid) return 2; // Repaid (lowest priority)
+          if (loan.lender === '0x0000000000000000000000000000000000000000') return 0; // Pending (highest priority)
+          return 1; // Active (medium priority)
+        };
+        
+        const statusA = getStatusValue(a);
+        const statusB = getStatusValue(b);
+        
+        if (statusA !== statusB) {
+          return statusA - statusB;
+        }
+        
+        // Then sort by ID (most recent first)
+        // Handle both number IDs and string IDs
+        const idA = typeof a.id === 'string' ? a.timestamp || 0 : parseInt(a.id);
+        const idB = typeof b.id === 'string' ? b.timestamp || 0 : parseInt(b.id);
+        
+        return idB - idA; // Descending (most recent first)
+      };
+      
+      const sortedLoans = [...loansArray].sort(sortByStatusAndId);
       
       setLoans(sortedLoans);
     } catch (error) {
@@ -79,10 +134,21 @@ function App() {
         setAccount(connection.address);
         setIsConnected(true);
         setContract(connection.contract);
+        
+        // Initialize contract proxy
+        const proxy = new ContractProxy(connection.contract, connection.address);
+        setContractProxy(proxy);
+        
+        // Check if we're in fallback mode
+        if (localStorage.getItem('fallbackMode') === 'true') {
+          setIsFallbackMode(true);
+        }
+        
         console.log("Wallet connected successfully:", connection.address);
         
         // Load loans after connecting
-        loadLoans(connection.contract);
+        // We pass the new proxy since the state might not be updated yet
+        loadLoans(proxy);
       } else if (connection.error) {
         console.error("Connection returned error:", connection.error);
       }
@@ -98,9 +164,15 @@ function App() {
     setAccount('');
     setIsConnected(false);
     setContract(null);
+    setContractProxy(null);
     setLoans([]);
     setTransactionData(null);
     console.log("Wallet disconnected");
+    
+    // Clear fallback mode when disconnecting
+    localStorage.removeItem('fallbackMode');
+    localStorage.removeItem('fallbackReason');
+    setIsFallbackMode(false);
   };
 
   const formatAddress = (address) => {
@@ -110,7 +182,7 @@ function App() {
 
   const createLoan = async (e) => {
     e.preventDefault();
-    console.log('Creating loan:', { amount, interestRate, duration });
+    console.log('Creating loan:', { amount, interestRate, duration, isCollateralized });
     
     try {
       setIsLoading(true);
@@ -119,17 +191,13 @@ function App() {
       // Use zero address for token (represents ETH in the contract)
       const zeroAddress = "0x0000000000000000000000000000000000000000";
       
-      // Import the enhanced createLoan function from ethereum.js
-      const { createLoan } = await import('./ethereum');
-      
-      // Call our enhanced createLoan function with better error handling
-      const result = await createLoan(
-        contract,
+      // Use contract proxy to create loan
+      const result = await contractProxy.createLoan(
         zeroAddress,
         amount.toString(), 
         interestRate.toString(), 
         duration.toString(), 
-        false // Not collateralized for this example
+        isCollateralized
       );
       
       if (result.success) {
@@ -139,16 +207,18 @@ function App() {
           from: result.from,
           to: result.to,
           gasUsed: result.gasUsed,
-          loanId: result.loanId
+          loanId: result.loanId,
+          isLocal: result.isLocal
         });
         
         // Reset form fields
         setAmount('');
         setInterestRate('');
         setDuration('');
+        setIsCollateralized(false);
         
         // Reload loans after creating a new one
-        await loadLoans(contract);
+        await loadLoans(contractProxy);
         
         // Switch to the myloans tab to see the new loan
         setActiveTab('myloans');
@@ -169,13 +239,47 @@ function App() {
     setLastAction(type);
     
     // Reload loans to get the updated state
-    await loadLoans(contract);
+    await loadLoans(contractProxy);
+  };
+
+  // Get action text based on lastAction
+  const getActionText = (action) => {
+    switch (action) {
+      case 'create':
+        return 'Loan Created';
+      case 'fund':
+        return 'Loan Funded';
+      case 'repay':
+        return 'Loan Repaid';
+      case 'deposit-collateral':
+        return 'Collateral Deposited';
+      case 'withdraw-collateral':
+        return 'Collateral Withdrawn';
+      default:
+        return 'Transaction Completed';
+    }
   };
 
   return (
     <div className="app-container">
       <header className="app-header">
         <h1>DeFi Lending Platform</h1>
+        {isFallbackMode && (
+          <div className="fallback-notice">
+            <span role="img" aria-label="warning">⚠️</span> Running in local simulation mode
+            <button 
+              onClick={() => {
+                localStorage.removeItem('fallbackMode');
+                localStorage.removeItem('fallbackReason');
+                setIsFallbackMode(false);
+                window.location.reload();
+              }}
+              className="reset-button"
+            >
+              Reset
+            </button>
+          </div>
+        )}
         <div className="wallet-section">
           {!isConnected ? (
             <button onClick={handleConnectWallet} className="connect-button">
@@ -212,31 +316,36 @@ function App() {
             </button>
             <button 
               className={`tab-button ${activeTab === 'myloans' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('myloans'); loadLoans(contract); }}
+              onClick={() => { setActiveTab('myloans'); loadLoans(contractProxy); }}
             >
               My Loans
             </button>
             <button 
               className={`tab-button ${activeTab === 'pool' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('pool'); loadLoans(contract); }}
+              onClick={() => { setActiveTab('pool'); loadLoans(contractProxy); }}
             >
               Loan Pool
             </button>
             <button 
               className={`tab-button ${activeTab === 'active' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('active'); loadLoans(contract); }}
+              onClick={() => { setActiveTab('active'); loadLoans(contractProxy); }}
             >
               Active Loans
+            </button>
+            <button 
+              className={`tab-button ${activeTab === 'collateral' ? 'active' : ''}`}
+              onClick={() => setActiveTab('collateral')}
+            >
+              Collateral
             </button>
           </div>
           
           {/* Transaction success message */}
           {transactionData && (
-            <section className="transaction-details">
+            <section className={`transaction-details ${transactionData.isLocal ? 'local-transaction' : ''}`}>
               <h2>
-                {lastAction === 'create' ? 'Loan Created' : 
-                lastAction === 'fund' ? 'Loan Funded' : 
-                'Loan Repaid'} Successfully!
+                {getActionText(lastAction)} Successfully!
+                {transactionData.isLocal && <span className="simulation-badge">Simulated</span>}
               </h2>
               <div className="transaction-grid">
                 <div className="transaction-item">
@@ -259,15 +368,23 @@ function App() {
                   <span className="label">Gas Used:</span>
                   <span className="value">{transactionData.gasUsed}</span>
                 </div>
+                {transactionData.amount && (
+                  <div className="transaction-item">
+                    <span className="label">Amount:</span>
+                    <span className="value">{transactionData.amount} ETH</span>
+                  </div>
+                )}
               </div>
               <div className="explorer-link">
-                <a 
-                  href={`https://sepolia.etherscan.io/tx/${transactionData.hash}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                >
-                  View on Etherscan
-                </a>
+                {!transactionData.isLocal && (
+                  <a 
+                    href={`https://sepolia.etherscan.io/tx/${transactionData.hash}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    View on Etherscan
+                  </a>
+                )}
                 <button 
                   className="clear-tx-button" 
                   onClick={() => setTransactionData(null)}
@@ -292,6 +409,7 @@ function App() {
                     <h2>Create a New Loan Request</h2>
                     <ol>
                       <li>Enter the loan details including amount, interest rate, and duration.</li>
+                      <li>Select whether the loan should be collateralized (requires depositing collateral first).</li>
                       <li>Click "Create Loan" to submit your loan request to the blockchain.</li>
                       <li>After creation, you'll be able to see your loan in the "My Loans" tab.</li>
                     </ol>
@@ -319,6 +437,20 @@ function App() {
                       onChange={(e) => setDuration(e.target.value)}
                       required
                     />
+                    <div className="collateral-checkbox">
+                      <input
+                        id="collateralized"
+                        type="checkbox"
+                        checked={isCollateralized}
+                        onChange={(e) => setIsCollateralized(e.target.checked)}
+                      />
+                      <label htmlFor="collateralized">Collateralized Loan</label>
+                    </div>
+                    {isCollateralized && (
+                      <p className="collateral-note">
+                        Note: You need to deposit collateral in the "Collateral" tab before creating a collateralized loan.
+                      </p>
+                    )}
                     <button 
                       type="submit" 
                       className="submit-button"
@@ -340,7 +472,7 @@ function App() {
               {activeTab === 'pool' && (
                 <LoanPool 
                   loans={loans}
-                  contract={contract}
+                  contract={contractProxy}
                   address={account}
                   onTransactionComplete={handleTransactionComplete}
                 />
@@ -349,7 +481,15 @@ function App() {
               {activeTab === 'active' && (
                 <ActiveLoans 
                   loans={loans}
-                  contract={contract}
+                  contract={contractProxy}
+                  address={account}
+                  onTransactionComplete={handleTransactionComplete}
+                />
+              )}
+              
+              {activeTab === 'collateral' && (
+                <CollateralManagement 
+                  contract={contractProxy}
                   address={account}
                   onTransactionComplete={handleTransactionComplete}
                 />

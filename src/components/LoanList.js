@@ -219,7 +219,12 @@ const LoanList = ({ loans, contract, address, onTransactionComplete }) => {
         <div className="loans-container">
           {loans.map((loan) => (
             <div key={loan.id} className={`loan-card ${loan.repaid ? 'repaid' : ''}`}>
-              <h3>Loan #{loan.id}</h3>
+              <h3>
+                Loan #{loan.id}
+                {loan.collateralized && 
+                  <span className="collateralized-tag">Collateralized</span>
+                }
+              </h3>
               <div className="loan-details">
                 <p>
                   <span className="label">Amount:</span> 
